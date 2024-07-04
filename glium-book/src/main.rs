@@ -6,10 +6,16 @@ use winit::{
 	event_loop::EventLoopBuilder
 };
 use glium::{
-	backend::glutin::SimpleWindowBuilder, implement_vertex, index::{
+	backend::glutin::SimpleWindowBuilder,
+	implement_vertex,
+	index::{
 		NoIndices,
 		PrimitiveType
-	}, uniform, uniforms::EmptyUniforms, Program, Surface, VertexBuffer
+	},
+	uniform,
+	Program,
+	Surface,
+	VertexBuffer
 };
 
 #[derive(Clone, Copy)]
