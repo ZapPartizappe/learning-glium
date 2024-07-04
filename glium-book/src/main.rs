@@ -1,3 +1,6 @@
+use std::{fs, io::{Cursor, Read}};
+
+use image::ImageFormat;
 use winit::{
 	event::{
 		Event,
@@ -6,68 +9,53 @@ use winit::{
 	event_loop::EventLoopBuilder
 };
 use glium::{
-	backend::glutin::SimpleWindowBuilder,
-	implement_vertex,
-	index::{
+	backend::glutin::SimpleWindowBuilder, implement_vertex, index::{
 		NoIndices,
 		PrimitiveType
-	},
-	uniform,
-	Program,
-	Surface,
-	VertexBuffer
+	}, texture::RawImage2d, uniform, Program, Surface, Texture2d, VertexBuffer
 };
 
 #[derive(Clone, Copy)]
 struct Vertex {
 	position: [f32; 2],
-	color: [f32; 3],
+	tex_coords: [f32; 2],
 }
 
 fn main()
 {
-	implement_vertex!(Vertex, position, color);
+	implement_vertex!(Vertex, position, tex_coords);
 
 	let event_loop = EventLoopBuilder::new().build().expect("Event loop building...");
 
-	let (window, display) = SimpleWindowBuilder::new().build(&event_loop);
+	let (window, display) = SimpleWindowBuilder::new().with_title("Wow").build(&event_loop);
 
 	let shape = vec![
-		Vertex { position: [-0.5, -0.5], color: [1.0, 0.0, 0.0] },
-		Vertex { position: [ 0.0,  0.5], color: [0.0, 1.0, 0.0] },
-		Vertex { position: [ 0.5, -0.25], color: [0.0, 0.0, 1.0] }
+		Vertex { position: [-0.5, -0.5], tex_coords: [0.0, 0.0] },
+		Vertex { position: [ 0.5, -0.5], tex_coords: [1.0, 0.0] },
+		Vertex { position: [ 0.5,  0.5], tex_coords: [1.0, 1.0] },
+
+		Vertex { position: [ 0.5,  0.5], tex_coords: [1.0, 1.0] },
+		Vertex { position: [-0.5,  0.5], tex_coords: [0.0, 1.0] },
+		Vertex { position: [-0.5, -0.5], tex_coords: [0.0, 0.0] }
 	];
 
 	let vertex_buffer = VertexBuffer::new(&display, &shape).unwrap();
 	let indices = NoIndices(PrimitiveType::TrianglesList);
 
-	let vert_shader_src = r#"
-		#version 140
+	let image = image::load(
+		Cursor::new(&include_bytes!("../images/textures/basil.png")),
+		ImageFormat::Png
+	).unwrap().to_rgba8();
+	let image_dimensions = image.dimensions();
+	let image = RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
 
-		in vec2 position;
-		in vec3 color;
-		out vec3 vert_color;
+	let texture = Texture2d::new(&display, image).unwrap();
 
-		uniform mat4 matrix;
+	let mut vert_shader_src = String::new();
+	let mut frag_shader_src = String::new();
 
-		void main()
-		{
-			gl_Position = matrix * vec4(position, 0.0, 1.0);
-			vert_color = color;
-		}
-	"#;
-
-	let frag_shader_src = r#"
-		#version 140
-
-		in vec3 vert_color;
-		out vec4 color;
-
-		void main()
-		{
-			color = vec4(vert_color, 1.0);
-		}
-	"#;
+	fs::File::open("shaders/vert_shader.vert").unwrap().read_to_string(&mut vert_shader_src).unwrap();
+	fs::File::open("shaders/frag_shader.frag").unwrap().read_to_string(&mut frag_shader_src).unwrap();
 
 	let program =
 		Program::from_source(
@@ -97,7 +85,8 @@ fn main()
 							[-t_sin, t_cos, 0.0, 0.0],
 							[0.0, 0.0, 1.0, 0.0],
 							[0.0, 0.0, 0.0, 1.0],
-						]
+						],
+						tex: &texture
 					};
 
 					let mut target = display.draw();
