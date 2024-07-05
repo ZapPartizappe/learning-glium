@@ -1,11 +1,15 @@
-#version 140
+#version 150
 
-in vec2 vert_tex_coords;
+in vec3 v_normal;
 out vec4 color;
 
-uniform sampler2D tex;
+uniform vec3 u_light;
 
 void main()
 {
-	color = texture(tex, vert_tex_coords);
+	float brightness = dot(normalize(v_normal), normalize(u_light));
+	vec3 dark_color = vec3(0.6, 0.0, 0.0);
+	vec3 bright_color = vec3(1.0, 0.0, 0.0);
+
+	color = vec4(mix(dark_color, bright_color, brightness), 1.0);
 }

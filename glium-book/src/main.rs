@@ -1,12 +1,7 @@
 use std::{
 	fs,
-	io::{
-		Cursor,
-		Read
-	}
+	io::Read
 };
-
-use image::ImageFormat;
 
 use winit::{
 	event::{
@@ -17,18 +12,7 @@ use winit::{
 };
 
 use glium::{
-	backend::glutin::SimpleWindowBuilder,
-	implement_vertex,
-	index::{
-		NoIndices,
-		PrimitiveType
-	},
-	texture::RawImage2d,
-	uniform,
-	Program,
-	Surface,
-	Texture2d,
-	VertexBuffer
+	backend::glutin::SimpleWindowBuilder, implement_vertex, index::PrimitiveType, uniform, Depth, DrawParameters, IndexBuffer, Program, Surface, VertexBuffer
 };
 
 #[derive(Clone, Copy)]
@@ -47,27 +31,10 @@ fn main()
 
 	let (window, display) = SimpleWindowBuilder::new().with_title("Wow").build(&event_loop);
 
-	let shape = vec![
-		Vertex { position: [-0.5, -0.5], tex_coords: [0.0, 0.0] },
-		Vertex { position: [ 0.5, -0.5], tex_coords: [1.0, 0.0] },
-		Vertex { position: [ 0.5,  0.5], tex_coords: [1.0, 1.0] },
-
-		Vertex { position: [ 0.5,  0.5], tex_coords: [1.0, 1.0] },
-		Vertex { position: [-0.5,  0.5], tex_coords: [0.0, 1.0] },
-		Vertex { position: [-0.5, -0.5], tex_coords: [0.0, 0.0] }
-	];
-
-	let vertex_buffer = VertexBuffer::new(&display, &shape).unwrap();
-	let indices = NoIndices(PrimitiveType::TrianglesList);
-
-	let image = image::load(
-		Cursor::new(&include_bytes!("../images/textures/basil.png")),
-		ImageFormat::Png
-	).unwrap().to_rgba8();
-	let image_dimensions = image.dimensions();
-	let image = RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
-
-	let texture = Texture2d::new(&display, image).unwrap();
+	let positions = VertexBuffer::new(&display, &teapot::VERTICES).unwrap();
+	let normals = VertexBuffer::new(&display, &teapot::NORMALS).unwrap();
+	let indices =
+		IndexBuffer::new(&display, PrimitiveType::TrianglesList, &teapot::INDICES).unwrap();
 
 	let mut vert_shader_src = String::new();
 	let mut frag_shader_src = String::new();
@@ -83,6 +50,15 @@ fn main()
 			None
 		).unwrap();
 
+	let draw_parameters = DrawParameters {
+		depth: Depth {
+			test: glium::DepthTest::IfLess,
+			write: true,
+			.. Default::default()
+		},
+		.. Default::default()
+	};
+
 	let mut t: f32 = 0.0;
 
 	let _ = event_loop.run(move |event, window_target| {
@@ -95,24 +71,25 @@ fn main()
 				WindowEvent::RedrawRequested => {
 					t += 0.02;
 
-					let (t_sin, t_cos) = t.sin_cos();
-
-					let uniforms = uniform! {
-						matrix: [
-							[t_cos, t_sin, 0.0, 0.0],
-							[-t_sin, t_cos, 0.0, 0.0],
-							[0.0, 0.0, 1.0, 0.0],
-							[0.0, 0.0, 0.0, 1.0],
-						],
-						tex: &texture
-					};
+					let t_sin = 0.01 * t.sin();
+					let t_cos = 0.01 * t.cos();
 
 					let mut target = display.draw();
 
-					target.clear_color(0.0, 0.0, 0.0, 1.0);
+					target.clear_color_and_depth((0.0, 0.0, 0.0, 1.0), 1.0);
+
+					let matrix = [
+						[t_cos, 0.0, -t_sin, 0.0],
+						[0.0, 0.01, 0.0, 0.0],
+						[t_sin, 0.0, t_cos, 0.0],
+						[0.0, 0.0, 0.0, 1.0f32]
+					];
+					let light = [-1.0, 0.4, 0.9f32];
+
+					let uniforms = uniform! { matrix: matrix, u_light: light };
+
 					target.draw(
-						&vertex_buffer, indices, &program, &uniforms,
-						&Default::default()
+						(&positions, &normals), &indices, &program, &uniforms, &draw_parameters
 					).unwrap();
 					target.finish().unwrap();
 				},
