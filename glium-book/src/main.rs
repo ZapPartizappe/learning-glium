@@ -1,6 +1,5 @@
 use std::{
-	fs,
-	io::Read
+	f32::consts::PI, fs, io::Read
 };
 
 use winit::{
@@ -12,7 +11,7 @@ use winit::{
 };
 
 use glium::{
-	backend::glutin::SimpleWindowBuilder, implement_vertex, index::PrimitiveType, uniform, Depth, DrawParameters, IndexBuffer, Program, Surface, VertexBuffer
+	backend::glutin::SimpleWindowBuilder, implement_vertex, index::PrimitiveType, uniform, BackfaceCullingMode, Depth, DrawParameters, IndexBuffer, Program, Surface, VertexBuffer
 };
 
 #[derive(Clone, Copy)]
@@ -22,6 +21,7 @@ struct Vertex {
 }
 
 mod teapot;
+mod support;
 
 fn main()
 {
@@ -56,6 +56,7 @@ fn main()
 			write: true,
 			.. Default::default()
 		},
+		backface_culling: BackfaceCullingMode::CullClockwise,
 		.. Default::default()
 	};
 
@@ -78,15 +79,26 @@ fn main()
 
 					target.clear_color_and_depth((0.0, 0.0, 0.0, 1.0), 1.0);
 
-					let matrix = [
+					let position = [2.0, 1.0, 1.0];
+
+					let model = [
 						[t_cos, 0.0, -t_sin, 0.0],
 						[0.0, 0.01, 0.0, 0.0],
 						[t_sin, 0.0, t_cos, 0.0],
-						[0.0, 0.0, 0.0, 1.0f32]
+						[0.0, 0.0, 2.0, 1.0f32]
 					];
-					let light = [-1.0, 0.4, 0.9f32];
+					let light = [1.4, 0.4, -0.7f32];
+					let perspective = support::perspective_mat(target.get_dimensions(), PI / 3.0);
+					let view =
+						support::view_mat(&position, &[-2.0, -1.0, 1.0], &[0.0, 1.0, 0.0]);
 
-					let uniforms = uniform! { matrix: matrix, u_light: light };
+					let uniforms =
+						uniform! {
+							model: model,
+							view: view,
+							perspective: perspective,
+							u_light: light,
+						};
 
 					target.draw(
 						(&positions, &normals), &indices, &program, &uniforms, &draw_parameters
@@ -101,4 +113,10 @@ fn main()
 			_ => (),
 		}
 	});
+}
+
+#[allow(dead_code)]
+fn spinny_basil()
+{
+	
 }
