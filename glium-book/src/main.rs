@@ -1,6 +1,13 @@
-use std::{fs, io::{Cursor, Read}};
+use std::{
+	fs,
+	io::{
+		Cursor,
+		Read
+	}
+};
 
 use image::ImageFormat;
+
 use winit::{
 	event::{
 		Event,
@@ -8,11 +15,20 @@ use winit::{
 	},
 	event_loop::EventLoopBuilder
 };
+
 use glium::{
-	backend::glutin::SimpleWindowBuilder, implement_vertex, index::{
+	backend::glutin::SimpleWindowBuilder,
+	implement_vertex,
+	index::{
 		NoIndices,
 		PrimitiveType
-	}, texture::RawImage2d, uniform, Program, Surface, Texture2d, VertexBuffer
+	},
+	texture::RawImage2d,
+	uniform,
+	Program,
+	Surface,
+	Texture2d,
+	VertexBuffer
 };
 
 #[derive(Clone, Copy)]
@@ -20,6 +36,8 @@ struct Vertex {
 	position: [f32; 2],
 	tex_coords: [f32; 2],
 }
+
+mod teapot;
 
 fn main()
 {
@@ -93,7 +111,7 @@ fn main()
 
 					target.clear_color(0.0, 0.0, 0.0, 1.0);
 					target.draw(
-						&vertex_buffer, &indices, &program, &uniforms,
+						&vertex_buffer, indices, &program, &uniforms,
 						&Default::default()
 					).unwrap();
 					target.finish().unwrap();
