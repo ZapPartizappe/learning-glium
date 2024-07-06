@@ -14,7 +14,20 @@ use winit::{
 };
 
 use glium::{
-	backend::glutin::SimpleWindowBuilder, implement_vertex, index::{NoIndices, PrimitiveType}, texture::RawImage2d, uniform, BackfaceCullingMode, Depth, DrawParameters, Program, Surface, Texture2d, VertexBuffer
+	backend::glutin::SimpleWindowBuilder,
+	implement_vertex,
+	index::{
+		NoIndices,
+		PrimitiveType
+	},
+	texture::RawImage2d,
+	uniform,
+	Depth,
+	DrawParameters,
+	Program,
+	Surface,
+	Texture2d,
+	VertexBuffer
 };
 
 #[derive(Clone, Copy)]
