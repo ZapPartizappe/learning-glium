@@ -1,7 +1,10 @@
 use std::{
-	f32::consts::PI, fs, io::Read
+	f32::consts::PI,
+	fs,
+	io::{Cursor, Read}
 };
 
+use image::ImageFormat;
 use winit::{
 	event::{
 		Event,
@@ -11,12 +14,13 @@ use winit::{
 };
 
 use glium::{
-	backend::glutin::SimpleWindowBuilder, implement_vertex, index::PrimitiveType, uniform, BackfaceCullingMode, Depth, DrawParameters, IndexBuffer, Program, Surface, VertexBuffer
+	backend::glutin::SimpleWindowBuilder, implement_vertex, index::{NoIndices, PrimitiveType}, texture::RawImage2d, uniform, BackfaceCullingMode, Depth, DrawParameters, Program, Surface, Texture2d, VertexBuffer
 };
 
 #[derive(Clone, Copy)]
 struct Vertex {
-	position: [f32; 2],
+	position: [f32; 3],
+	normal: [f32; 3],
 	tex_coords: [f32; 2],
 }
 
@@ -25,16 +29,34 @@ mod support;
 
 fn main()
 {
-	implement_vertex!(Vertex, position, tex_coords);
+	implement_vertex!(Vertex, position, normal, tex_coords);
 
 	let event_loop = EventLoopBuilder::new().build().expect("Event loop building...");
 
 	let (window, display) = SimpleWindowBuilder::new().with_title("Wow").build(&event_loop);
 
-	let positions = VertexBuffer::new(&display, &teapot::VERTICES).unwrap();
-	let normals = VertexBuffer::new(&display, &teapot::NORMALS).unwrap();
-	let indices =
-		IndexBuffer::new(&display, PrimitiveType::TrianglesList, &teapot::INDICES).unwrap();
+	let shape = VertexBuffer::new(&display, &[
+		Vertex { position: [-1.0,  1.0, 0.0], normal: [0.0, 0.0, -1.0], tex_coords: [0.0, 1.0] },
+		Vertex { position: [ 1.0,  1.0, 0.0], normal: [0.0, 0.0, -1.0], tex_coords: [1.0, 1.0] },
+		Vertex { position: [-1.0, -1.0, 0.0], normal: [0.0, 0.0, -1.0], tex_coords: [0.0, 0.0] },
+		Vertex { position: [ 1.0, -1.0, 0.0], normal: [0.0, 0.0, -1.0], tex_coords: [1.0, 0.0] },
+	]).unwrap();
+
+	let image = image::load(
+		Cursor::new(&include_bytes!("../images/textures/diffuse.jpg")),
+		ImageFormat::Jpeg
+	).unwrap().to_rgba8();
+	let image_dimensions = image.dimensions();
+	let image = RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+	let diffuse_tex = Texture2d::new(&display, image).unwrap();
+
+	let image = image::load(
+		Cursor::new(&include_bytes!("../images/textures/normal.png")),
+		ImageFormat::Png
+	).unwrap().to_rgba8();
+	let image_dimensions = image.dimensions();
+	let image = RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+	let normal_tex = Texture2d::new(&display, image).unwrap();
 
 	let mut vert_shader_src = String::new();
 	let mut frag_shader_src = String::new();
@@ -56,7 +78,6 @@ fn main()
 			write: true,
 			.. Default::default()
 		},
-		backface_culling: BackfaceCullingMode::CullClockwise,
 		.. Default::default()
 	};
 
@@ -72,25 +93,22 @@ fn main()
 				WindowEvent::RedrawRequested => {
 					t += 0.02;
 
-					let t_sin = 0.01 * t.sin();
-					let t_cos = 0.01 * t.cos();
+					let (t_sin, t_cos) = t.sin_cos();
 
 					let mut target = display.draw();
 
-					target.clear_color_and_depth((0.0, 0.0, 0.0, 1.0), 1.0);
-
-					let position = [2.0, 1.0, 1.0];
+					target.clear_color_and_depth((0.0, 0.0, 1.0, 1.0), 1.0);
 
 					let model = [
-						[t_cos, 0.0, -t_sin, 0.0],
-						[0.0, 0.01, 0.0, 0.0],
-						[t_sin, 0.0, t_cos, 0.0],
-						[0.0, 0.0, 2.0, 1.0f32]
+						[t_cos,	 t_sin,	0.0, 0.0],
+						[-t_sin, t_cos,	0.0, 0.0],
+						[0.0,	 0.0,	1.0, 0.0],
+						[0.0,	 0.0,	0.0, 1.0f32]
 					];
-					let light = [1.4, 0.4, -0.7f32];
+					let light = [1.4, 0.4, 0.7f32];
 					let perspective = support::perspective_mat(target.get_dimensions(), PI / 3.0);
 					let view =
-						support::view_mat(&position, &[-2.0, -1.0, 1.0], &[0.0, 1.0, 0.0]);
+						support::view_mat(&[0.5, 0.2, -3.0], &[-0.5, -0.2, 3.0], &[0.0, 1.0, 0.0]);
 
 					let uniforms =
 						uniform! {
@@ -98,10 +116,12 @@ fn main()
 							view: view,
 							perspective: perspective,
 							u_light: light,
+							diffuse_tex: &diffuse_tex,
+							normal_tex: &normal_tex,
 						};
 
 					target.draw(
-						(&positions, &normals), &indices, &program, &uniforms, &draw_parameters
+						&shape, NoIndices(PrimitiveType::TriangleStrip), &program, &uniforms, &draw_parameters
 					).unwrap();
 					target.finish().unwrap();
 				},

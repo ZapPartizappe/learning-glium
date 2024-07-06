@@ -7,6 +7,7 @@ pub struct Vertex {
 
 implement_vertex!(Vertex, position);
 
+#[allow(dead_code)]
 pub const VERTICES: [Vertex; 531] = [
 	Vertex { position: (0.0, 0.0, 0.0) },   // dummy vector because in the original model indices
 											// start at 1
@@ -549,6 +550,7 @@ pub struct Normal {
 
 implement_vertex!(Normal, normal);
 
+#[allow(dead_code)]
 pub const NORMALS: [Normal; 531] = [
 	Normal { normal: (0.0, 0.0, 0.0) },     // dummy vector because in the original model indices
 											// start at 1
@@ -1084,6 +1086,7 @@ pub const NORMALS: [Normal; 531] = [
 	Normal { normal: (0.48559, 0.850653, -0.201474) },
 ];
 
+#[allow(dead_code)]
 pub const INDICES: [u16; 3072] = [
 	7, 6, 1,
 	1, 2, 7,
