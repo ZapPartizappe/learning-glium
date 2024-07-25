@@ -1,7 +1,7 @@
 use std::{
 	f32::consts::PI,
 	fs,
-	io::{Cursor, Read}
+	io::{Cursor, Read}, time::Instant
 };
 
 use image::ImageFormat;
@@ -10,7 +10,7 @@ use winit::{
 		Event,
 		WindowEvent
 	},
-	event_loop::EventLoopBuilder
+	event_loop::EventLoopBuilder, keyboard::KeyCode
 };
 
 use glium::{
@@ -46,7 +46,7 @@ fn main()
 
 	let event_loop = EventLoopBuilder::new().build().expect("Event loop building...");
 
-	let (window, display) = SimpleWindowBuilder::new().with_title("Wow").build(&event_loop);
+	let (window, display) = SimpleWindowBuilder::new().with_title("So normal").build(&event_loop);
 
 	let shape = VertexBuffer::new(&display, &[
 		Vertex { position: [-1.0,  1.0, 0.0], normal: [0.0, 0.0, -1.0], tex_coords: [0.0, 1.0] },
@@ -94,7 +94,7 @@ fn main()
 		.. Default::default()
 	};
 
-	let mut t: f32 = 0.0;
+	let start = Instant::now();
 
 	let _ = event_loop.run(move |event, window_target| {
 		match event {
@@ -104,13 +104,12 @@ fn main()
 					display.resize(window_size.into());
 				},
 				WindowEvent::RedrawRequested => {
-					t += 0.02;
-
+					let t = (Instant::now() - start).as_secs_f32();
 					let (t_sin, t_cos) = t.sin_cos();
 
 					let mut target = display.draw();
 
-					target.clear_color_and_depth((0.0, 0.0, 1.0, 1.0), 1.0);
+					target.clear_color_and_depth((0.0, 0.0, 0.0, 1.0), 1.0);
 
 					let model = [
 						[t_cos,	 t_sin,	0.0, 0.0],
@@ -137,6 +136,19 @@ fn main()
 						&shape, NoIndices(PrimitiveType::TriangleStrip), &program, &uniforms, &draw_parameters
 					).unwrap();
 					target.finish().unwrap();
+				},
+				WindowEvent::KeyboardInput { event, .. } => {
+					match event.physical_key {
+							winit::keyboard::PhysicalKey::Code(key) => {
+								match key {
+									KeyCode::Escape => window_target.exit(),
+									_ => ()
+								}
+							},
+							winit::keyboard::PhysicalKey::Unidentified(_) => todo!(),
+						}
+
+						window.request_redraw();
 				},
 				_ => ()
 			},
